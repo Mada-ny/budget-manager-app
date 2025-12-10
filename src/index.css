@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+    --color-norway-50: oklch(0.9768 0.0045 134.85);
+    --color-norway-100: oklch(0.9484 0.0124 137.79);
+    --color-norway-200: oklch(0.8962 0.0251 137.81);
+    --color-norway-300: oklch(0.7651 0.0583 137.91);
+    --color-norway-400: oklch(0.698 0.066 137.95);
+    --color-norway-500: oklch(0.5955 0.0767 138.2);
+    --color-norway-600: oklch(0.5115 0.0686 137.88);
+    --color-norway-700: oklch(0.4373 0.0535 138.27);
+    --color-norway-800: oklch(0.3812 0.0404 138.33);
+    --color-norway-900: oklch(0.3382 0.0345 140.11);
+    --color-norway-950: oklch(0.2265 0.0246 139.96);
+}
