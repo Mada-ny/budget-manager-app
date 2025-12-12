@@ -1,6 +1,6 @@
 import { Outlet } from "react-router";
-import MobileNav from "../components/navigation/MobileNav";
-import DesktopNav from "../components/navigation/DesktopNav";
+import MobileNav from "@/components/navigation/MobileNav";
+import DesktopNav from "@/components/navigation/DesktopNav";
 
 export default function MainLayout() {
     return (
