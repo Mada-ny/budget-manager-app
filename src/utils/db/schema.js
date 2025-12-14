@@ -4,20 +4,20 @@ export const db = new Dexie('BudgetManagerDB');
 
 db.version(1).stores({
     accounts: "++id, &name, initialBalance",
-    categories: "++id, &name",
+    categories: "++id, &name, type",
     transactions: "++id, date, accountId, categoryId, amount, description, [accountId+date], [date+categoryId], [accountId+categoryId]"
 })
 
 db.on("populate", function(transaction) {
     transaction.categories.bulkAdd([
-        { name: "Alimentation" },
-        { name: "Transport" },
-        { name: "Logement" },
-        { name: "Loisirs" },
-        { name: "Revenus" },
-        { name: "Abonnements" },
-        { name: "Santé" },
-        { name: "Éducation" }
+        { name: "Alimentation", type: "expense" },
+        { name: "Transport", type: "expense"  },
+        { name: "Logement", type: "expense" },
+        { name: "Loisirs", type: "expense" },
+        { name: "Salaire", type: "income" },
+        { name: "Abonnements", type: "expense" },
+        { name: "Santé", type: "expense" },
+        { name: "Éducation", type: "expense" }
     ]);
 
     transaction.accounts.bulkAdd([

@@ -5,7 +5,7 @@ export default function Dashboard() {
     return (
         <>
             <h1>Hello</h1>
-            <TransactionList />
+            <TransactionList variant={"mobile"} />
         </>
     )
 }
