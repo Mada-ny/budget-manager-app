@@ -2,7 +2,7 @@ import { useEnrichedTransactions } from "@/utils/db/hooks/useEnrichedTransaction
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getRelativeDate } from "@/utils/date/getRelativeDate";
-import { Badge } from "./ui/badge";
+import { Badge } from "../ui/badge";
 
 export default function TransactionList({
     detailed = false,
@@ -26,7 +26,7 @@ export default function TransactionList({
                                 </span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className={`font-semibold ${transaction.isIncome ? "text-red-400" : "text-green-400" } `}>
+                                <span className={`font-semibold ${transaction.isIncome ? "text-green-400" : "text-red-400" } `}>
                                     {transaction.isIncome ? '+' : '-'}{transaction.amount}
                                 </span>
                                 <span className="text-sm font-medium text-gray-500">{transaction.category?.name}</span>
@@ -51,7 +51,7 @@ export default function TransactionList({
                                 </span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className={`font-semibold ${transaction.isIncome ? "text-red-400" : "text-green-400" } `}>
+                                <span className={`font-semibold ${transaction.isIncome ? "text-green-400" : "text-red-400" } `}>
                                     {transaction.isIncome ? '+' : '-'}{transaction.amount}
                                 </span>
                                 <span className="text-sm font-medium text-gray-500">

@@ -19,7 +19,7 @@ export function useEnrichedTransactions({ limit } = {}) {
         date: new Date(t.date),
     }))
     .toSorted((a, b) => compareDesc(a.date, b.date))
-    .slice (0, limit)
+    .slice(0, limit)
     .map((t) => {
         const category = categoryMap[t.categoryId];
         const account = accountMap[t.accountId]
