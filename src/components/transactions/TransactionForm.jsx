@@ -62,15 +62,23 @@ export default function TransactionForm() {
     function onSubmit(data) {
         const dateTime = buildDateTime(data.date, data.time);
 
+        const category = categories.find(
+            (c) => c.id === data.categoryId
+        );
+
+        const signedAmount = category && category?.type === 'income' 
+            ? data.amount 
+            : -data.amount;
+
         db.transactions.add({
             date: dateTime,
             accountId: data.accountId,
             categoryId: data.categoryId,
-            amount: data.amount,
+            amount: signedAmount,
             description: data.description,
         });
 
-        form.reset();
+        form.reset(getDefaultValues());
 
         toast.success("Transaction ajoutée avec succès.", {
             position: "bottom-right"
