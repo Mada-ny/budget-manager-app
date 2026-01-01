@@ -5,6 +5,7 @@ import TransactionsFormLayout from "./layouts/transactions/TransactionsFormLayou
 import DashboardPage from "./pages/DashboardPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import NewTransactionPage from "./pages/NewTransactionPage";
+import EditTransactionPage from "./pages/EditTransactionPage";
 import SettingsPage from "./pages/SettingsPage";
 import DataManagementPage from "./pages/DataManagementPage";
 
@@ -24,12 +25,11 @@ export const router = createBrowserRouter([
                         element: <TransactionsFormLayout />,
                         children: [
                             { path: "new", element: <NewTransactionPage /> },
-                            // { path: ":id/edit", element: <EditTransactionPage /> },
+                            { path: ":id/edit", element: <EditTransactionPage /> },
                         ],
                     },
                 ],
             },
-            { path: "transactions/new", element: <NewTransactionPage /> },
             { path: "settings", element: <SettingsPage /> },
             { path: "settings/data", element: <DataManagementPage /> },
         ]

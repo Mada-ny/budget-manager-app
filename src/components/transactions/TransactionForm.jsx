@@ -1,7 +1,9 @@
 import { useAccounts, useCategories } from "@/utils/db/hooks";
+import { useTransaction } from "@/utils/db/hooks/useTransaction";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useEffect } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -9,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import DatePicker from "../date/DatePicker";
 import { db } from "@/utils/db/schema";
-import { isFuture } from "date-fns";
+import { isFuture, format } from "date-fns";
 
 function buildDateTime(date, time) {
     const [h, m] = time.split(":");
@@ -17,6 +19,18 @@ function buildDateTime(date, time) {
     result.setHours(+h, +m, 0, 0);
     return result;
 }
+
+const getCreateDefaultValues = () => ({
+    amount: "",
+    description: "",
+    date: new Date(),
+    time: new Date().toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).slice(0, 5),
+    accountId: "",
+    categoryId: "",
+});
 
 const formSchema = z.object({
     amount: z.coerce.number().min(1, "Le montant doit être supérieur à 0."),
@@ -36,59 +50,77 @@ const formSchema = z.object({
     }
 });
 
-export default function TransactionForm({ onSuccess }) {
+export default function TransactionForm({ 
+    mode = "create",
+    transactionId = null,
+    onSuccess 
+}) {
+    const existingTransaction = useTransaction(
+        mode === "edit" ? transactionId : null
+    );
+    
     const accounts = useAccounts();
     const categories = useCategories();
 
-    const getDefaultValues = () => ({
-        amount: '',
-        description: "",
-        date: new Date(),
-        time: new Date().toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit"
-        }).slice(0, 5),
-        accountId: "",
-        categoryId: "",
-      });
+    const isLoading =
+        mode === "edit" &&
+        transactionId != null &&
+        existingTransaction === undefined
     
     const form = useForm({
         resolver: zodResolver(formSchema),
         mode: "onChange",
-        defaultValues: getDefaultValues(),
-    })
+        defaultValues: getCreateDefaultValues(),
+    });
 
-    function onSubmit(data) {
-        const dateTime = buildDateTime(data.date, data.time);
-
-        const category = categories.find(
-            (c) => c.id === data.categoryId
-        );
-
-        if (!category) {
-            toast.error("Catégorie invalide");
-            return;
+    useEffect(() => {
+        if (mode !== "edit") return;
+        if (!existingTransaction) return;
+        
+        if (mode === "edit" && existingTransaction) {
+            form.reset({
+                amount: Math.abs(existingTransaction.amount),
+                description: existingTransaction.description,
+                categoryId: existingTransaction.categoryId,
+                accountId: existingTransaction.accountId,
+                date: existingTransaction.date,
+                time: format(existingTransaction.date, "HH:mm"),
+            });
         }
+    }, [mode, existingTransaction, form]);
 
+    const onSubmit = async (data) => {
+        const category = categories.find((c) => c.id === data.categoryId);
         const signedAmount = category.type === 'income' 
             ? data.amount 
             : -data.amount;
 
-        db.transactions.add({
-            date: dateTime,
+        const transactionData = {
+            date: buildDateTime(data.date, data.time),
             accountId: data.accountId,
             categoryId: data.categoryId,
             amount: signedAmount,
             description: data.description,
-        });
+        }
 
-        form.reset(getDefaultValues());
+        if (mode === "create") {
+            await db.transactions.add(transactionData);
+            toast.success("Transaction ajoutée avec succès.");
+        } else {
+            await db.transactions.update(transactionId, transactionData);
+            toast.success("Transaction modifiée avec succès.");
+        }
 
-        toast.success("Transaction ajoutée avec succès.", {
-            position: "bottom-right"
-        })
-
+        form.reset(getCreateDefaultValues());
         onSuccess?.();
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-norway-600" />
+            </div>
+        );
     }
 
     return (
@@ -96,10 +128,13 @@ export default function TransactionForm({ onSuccess }) {
             {/* Header */}
             <div className="mb-6">
                 <h2 className="text-lg font-semibold">
-                    Nouvelle transaction
+                    {mode === "create" ? "Nouvelle transaction" : "Modifier la transaction"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                    Ajoutez une nouvelle transaction (dépense ou revenu) à votre compte.
+                {mode === "create" 
+                    ? "Ajoutez une nouvelle transaction (dépense ou revenu) à votre compte."
+                    : "Modifiez les détails de votre transaction."
+                }
                 </p>
             </div>
 
@@ -313,7 +348,7 @@ export default function TransactionForm({ onSuccess }) {
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.reset(getDefaultValues())}
+                    onClick={() => form.reset(getCreateDefaultValues())}
                 >
                     Réinitialiser
                 </Button>
@@ -329,7 +364,8 @@ export default function TransactionForm({ onSuccess }) {
                 >
                     {form.formState.isSubmitting
                         ? "Enregistrement..."
-                        : "Enregistrer"}
+                        : mode === "create" ? "Ajouter" : "Enregistrer"
+                    }
                 </Button>
             </div>
         </div>

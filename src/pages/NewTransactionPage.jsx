@@ -5,7 +5,8 @@ export default function NewTransactionPage() {
     const navigate = useNavigate();
 
     return (
-        <TransactionForm 
+        <TransactionForm
+            mode="create"
             onSuccess={() => navigate(-1)}
         />
     )

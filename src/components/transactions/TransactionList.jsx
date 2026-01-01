@@ -2,20 +2,24 @@ import { useEnrichedTransactions } from "@/utils/db/hooks/useEnrichedTransaction
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getRelativeDate } from "@/utils/date/getRelativeDate";
-import { Badge } from "../ui/badge";
+import { useNavigate } from "react-router-dom";
 
 export default function TransactionList({
     detailed = false,
     limit,
     variant = "mobile"
 }) {
+    const navigate = useNavigate();
     const displayedTransactions = useEnrichedTransactions({ limit });
 
     if (variant === "mobile") {
         return (
             <ul className="p-4 space-y-3">
                 {displayedTransactions.map((transaction) => (
-                        <li key={transaction.id} className="flex justify-between items-center">
+                        <li 
+                            onClick={() => navigate(`/transactions/${transaction.id}/edit`)} 
+                            key={transaction.id} className="flex justify-between items-center"
+                        >
                             <div className="flex flex-col">
                                 <span className="font-semibold">{ transaction.description }</span>
                                 <span className="text-sm text-gray-500 font-medium">
