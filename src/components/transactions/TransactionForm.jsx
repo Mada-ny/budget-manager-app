@@ -1,24 +1,17 @@
-import { useAccounts, useCategories } from "@/utils/db/hooks";
-import { useTransaction } from "@/utils/db/hooks/useTransaction";
+import { useAccounts, useCategories, useTransaction } from "@/utils/db/hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import DatePicker from "../date/DatePicker";
+import { buildDateTime } from "@/utils/date/buildDateTime";
 import { db } from "@/utils/db/schema";
 import { isFuture, format } from "date-fns";
-
-function buildDateTime(date, time) {
-    const [h, m] = time.split(":");
-    const result = new Date(date);
-    result.setHours(+h, +m, 0, 0);
-    return result;
-}
 
 const getCreateDefaultValues = () => ({
     amount: "",
@@ -37,8 +30,8 @@ const formSchema = z.object({
     description: z.string().trim().min(5, "Veuillez préciser la dépense (ex: Burger, courses, taxi)."),
     date: z.date(),
     time: z.string().regex(/^\d{2}:\d{2}$/, "Heure non valide."),
-    accountId: z.coerce.number().min(1, "Vous devez sélectionner un compte."),
-    categoryId: z.coerce.number().min(1, "Vous devez sélectionner une catégorie."),
+    accountId: z.string().min(1, "Vous devez sélectionner un compte."),
+    categoryId: z.string().min(1, "Vous devez sélectionner une catégorie."),
 }).superRefine((data, ctx) => {
     const dateTime = buildDateTime(data.date, data.time);
     if (isFuture(dateTime)) {
@@ -56,16 +49,16 @@ export default function TransactionForm({
     onSuccess 
 }) {
     const existingTransaction = useTransaction(
-        mode === "edit" ? transactionId : null
+        mode === "edit" ? Number(transactionId) : null
     );
     
     const accounts = useAccounts();
     const categories = useCategories();
 
     const isLoading =
-        mode === "edit" &&
-        transactionId != null &&
-        existingTransaction === undefined
+        (mode === "edit" && !transactionId) ||
+        !accounts.length ||
+        !categories.length;
     
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -73,32 +66,49 @@ export default function TransactionForm({
         defaultValues: getCreateDefaultValues(),
     });
 
+    const [localCategory, setLocalCategory] = useState("");
+    const [localAccount, setLocalAccount] = useState("");
+
+    
     useEffect(() => {
-        if (mode !== "edit") return;
-        if (!existingTransaction) return;
+        if (mode === "edit" && existingTransaction && accounts.length && categories.length) {
+            const cat = String(existingTransaction.categoryId);
+            const acc = String(existingTransaction.accountId);
         
-        if (mode === "edit" && existingTransaction) {
             form.reset({
                 amount: Math.abs(existingTransaction.amount),
                 description: existingTransaction.description,
-                categoryId: existingTransaction.categoryId,
-                accountId: existingTransaction.accountId,
+                categoryId: cat,
+                accountId: acc,
                 date: existingTransaction.date,
                 time: format(existingTransaction.date, "HH:mm"),
             });
+        
+            setTimeout(() => {
+                setLocalCategory(cat);
+                setLocalAccount(acc);
+            }, 0);
         }
-    }, [mode, existingTransaction, form]);
+    }, [mode, existingTransaction, form, accounts, categories]);
 
     const onSubmit = async (data) => {
-        const category = categories.find((c) => c.id === data.categoryId);
+        const category = categories.find(
+            (c) => String(c.id) === data.categoryId
+        );
+
+        if (!category) {
+            toast.error("Catégorie invalide.");
+            return;
+        }
+
         const signedAmount = category.type === 'income' 
             ? data.amount 
             : -data.amount;
 
         const transactionData = {
             date: buildDateTime(data.date, data.time),
-            accountId: data.accountId,
-            categoryId: data.categoryId,
+            accountId: Number(data.accountId),
+            categoryId: Number(data.categoryId),
             amount: signedAmount,
             description: data.description,
         }
@@ -107,24 +117,26 @@ export default function TransactionForm({
             await db.transactions.add(transactionData);
             toast.success("Transaction ajoutée avec succès.");
         } else {
-            await db.transactions.update(transactionId, transactionData);
+            await db.transactions.update(Number(transactionId), transactionData);
             toast.success("Transaction modifiée avec succès.");
         }
 
-        form.reset(getCreateDefaultValues());
+        if (mode === "create") {
+            form.reset(getCreateDefaultValues());
+        }
         onSuccess?.();
     }
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center p-8">
+            <div className="flex h-screen items-center justify-center p-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-norway-600" />
             </div>
         );
     }
 
     return (
-        <div className="w-full p-4 bg-white">
+        <div className="w-full h-screen p-4 bg-white">
             {/* Header */}
             <div className="mb-6">
                 <h2 className="text-lg font-semibold">
@@ -181,10 +193,12 @@ export default function TransactionForm({
                                     Catégorie
                                 </FieldLabel>
                                 <Select
-                                    value={field.value ? field.value.toString() : ""}
-                                    onValueChange={(value) =>
-                                        field.onChange(Number(value))
-                                    }
+                                    value={localCategory}
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        setLocalCategory(value);
+                                    }}
+                                    disabled={!categories.length}
                                 >
                                     <SelectTrigger id="transaction-form-category">
                                         <SelectValue placeholder="Choisissez une catégorie" />
@@ -219,10 +233,12 @@ export default function TransactionForm({
                                     Compte
                                 </FieldLabel>
                                 <Select
-                                    value={field.value ? field.value.toString() : ""}
-                                    onValueChange={(value) =>
-                                        field.onChange(Number(value))
-                                    }
+                                    value={localAccount}
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        setLocalAccount(value);
+                                    }}
+                                    disabled={!accounts.length}
                                 >
                                     <SelectTrigger id="transaction-form-account">
                                         <SelectValue placeholder="Choisissez un compte" />
@@ -348,7 +364,13 @@ export default function TransactionForm({
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.reset(getCreateDefaultValues())}
+                    onClick={
+                        () => {
+                            form.reset(getCreateDefaultValues());
+                            setLocalAccount("");
+                            setLocalCategory("");
+                        }
+                    }
                 >
                     Réinitialiser
                 </Button>
